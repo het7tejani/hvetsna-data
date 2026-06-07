@@ -1,4 +1,5 @@
 const { Expense } = require('../models/Expense');
+const OfficeSummary = require('../models/OfficeSummary');
 
 // Category auto-detection keywords
 const CATEGORY_MAP = {
@@ -168,7 +169,7 @@ exports.voiceEntry = async (req, res) => {
 // Called from the frontend manual form
 exports.manualEntry = async (req, res) => {
   try {
-    const { amount, description, category } = req.body;
+    const { amount, description, category, items } = req.body;
 
     if (!amount || !description) {
       return res.status(400).json({
@@ -183,6 +184,7 @@ exports.manualEntry = async (req, res) => {
       category: category || detectCategory(description),
       rawText: `manual: ${amount} ${description}`,
       source: 'manual',
+      items: items || [],
       date: getTodayIST(),
     });
 
@@ -300,3 +302,69 @@ exports.deleteEntry = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+// GET /api/v1/hisab/office-summary?month=YYYY-MM
+// Aggregates imports vs payments and upserts to OfficeSummary model
+exports.getOfficeSummary = async (req, res) => {
+  try {
+    const now = new Date();
+    const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+    const defaultMonth = ist.toISOString().slice(0, 7); // "YYYY-MM"
+    const month = req.query.month || defaultMonth;
+
+    // Find all entries for this month belonging to the office category
+    const entries = await Expense.find({
+      category: 'office',
+      date: { $regex: `^${month}` }
+    });
+
+    const isPaymentDescription = (desc) => {
+      if (!desc) return false;
+      const lower = desc.toLowerCase();
+      return (
+        lower.includes('repayment') ||
+        lower.includes('repay') ||
+        lower.includes('paid to brother') ||
+        lower.includes('payment to brother') ||
+        lower.includes('pay due') ||
+        lower.includes('due pay') ||
+        lower.includes('payment made')
+      );
+    };
+
+    let totalImports = 0;
+    let totalPaid = 0;
+
+    entries.forEach((e) => {
+      if (isPaymentDescription(e.description)) {
+        totalPaid += e.amount;
+      } else {
+        totalImports += e.amount;
+      }
+    });
+
+    const netDue = Math.max(0, totalImports - totalPaid);
+
+    // Save/update the OfficeSummary DB model for this month (persistence)
+    const summary = await OfficeSummary.findOneAndUpdate(
+      { month },
+      {
+        month,
+        totalImports,
+        totalPaid,
+        netDue,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      month,
+      summary,
+    });
+  } catch (error) {
+    console.error('Office summary error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+

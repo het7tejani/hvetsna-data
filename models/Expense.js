@@ -27,7 +27,7 @@ const ExpenseSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       default: 'misc',
-      enum: ['food', 'transport', 'fuel', 'groceries', 'medicine', 'shopping', 'bills', 'entertainment', 'chai', 'misc'],
+      enum: ['food', 'transport', 'fuel', 'groceries', 'medicine', 'shopping', 'bills', 'entertainment', 'chai', 'misc', 'office'],
     },
     source: { type: String, enum: ['voice', 'manual'], default: 'manual' },
     date: {

@@ -7,6 +7,7 @@ const {
   getToday,
   getMonthlySummary,
   deleteEntry,
+  getOfficeSummary,
 } = require('../controllers/hisabController');
 
 // IFTTT webhook — voice entry
@@ -23,6 +24,9 @@ router.get('/today', getToday);
 
 // Monthly summary
 router.get('/monthly', getMonthlySummary);
+
+// Office summary
+router.get('/office-summary', getOfficeSummary);
 
 // Delete an entry
 router.delete('/entries/:id', deleteEntry);
