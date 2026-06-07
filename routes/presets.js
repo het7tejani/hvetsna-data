@@ -17,17 +17,22 @@ router.get('/', async (req, res) => {
 // @desc    Create a new predefined item preset
 router.post('/', async (req, res) => {
   try {
-    const { name, price, quantity } = req.body;
+    const { name, price, category } = req.body;
+    const categoryStr = (category || 'personal').trim().toLowerCase();
     
-    // Check if preset name already exists
-    const existing = await Preset.findOne({ name: name.trim() });
+    // Check if preset name already exists in this category
+    const existing = await Preset.findOne({ 
+      name: name.trim(), 
+      category: categoryStr 
+    });
     if (existing) {
-      return res.status(400).json({ error: 'A preset with this name already exists' });
+      return res.status(400).json({ error: 'A preset with this name already exists in this category' });
     }
 
     const newPreset = new Preset({
       name: name.trim(),
       price: parseFloat(price),
+      category: categoryStr,
     });
 
     const savedPreset = await newPreset.save();
