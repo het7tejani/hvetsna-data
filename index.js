@@ -17,9 +17,13 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || '*',
-    methods: ['GET', 'POST', 'DELETE'],
-    credentials: true,
+    origin: function(origin, callback) {
+      // Allow all origins (works for local and deployed frontend)
+      callback(null, true);
+    },
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false,
   })
 );
 
