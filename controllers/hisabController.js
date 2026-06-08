@@ -178,10 +178,16 @@ exports.manualEntry = async (req, res) => {
       });
     }
 
+    let finalCategory = category;
+    if (!finalCategory || finalCategory === 'home' || finalCategory === 'personal') {
+      const detected = detectCategory(description);
+      finalCategory = detected !== 'misc' ? detected : (finalCategory || 'home');
+    }
+
     const expense = await Expense.create({
       amount: parseFloat(amount),
       description: description.trim(),
-      category: category || detectCategory(description),
+      category: finalCategory,
       rawText: `manual: ${amount} ${description}`,
       source: 'manual',
       items: items || [],
