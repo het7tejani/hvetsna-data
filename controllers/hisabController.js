@@ -237,6 +237,35 @@ exports.getToday = async (req, res) => {
       byCategory[e.category] += e.amount;
     });
 
+    // Compute all-time cumulative office figures
+    const officeEntries = await Expense.find({ category: 'office' });
+    const isPaymentDescription = (desc) => {
+      if (!desc) return false;
+      const lower = desc.toLowerCase();
+      return (
+        lower.includes('repayment') ||
+        lower.includes('repay') ||
+        lower.includes('paid to brother') ||
+        lower.includes('payment to brother') ||
+        lower.includes('pay due') ||
+        lower.includes('due pay') ||
+        lower.includes('payment made')
+      );
+    };
+
+    let totalImports = 0;
+    let totalPaid = 0;
+
+    officeEntries.forEach((e) => {
+      if (isPaymentDescription(e.description)) {
+        totalPaid += e.amount;
+      } else {
+        totalImports += e.amount;
+      }
+    });
+
+    const netDue = Math.max(0, totalImports - totalPaid);
+
     return res.json({
       success: true,
       date,
@@ -244,6 +273,11 @@ exports.getToday = async (req, res) => {
       count: entries.length,
       byCategory,
       data: entries,
+      officeCumulative: {
+        totalImports,
+        totalPaid,
+        netDue,
+      },
     });
   } catch (error) {
     console.error('Get today error:', error);
@@ -373,4 +407,3 @@ exports.getOfficeSummary = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
-
